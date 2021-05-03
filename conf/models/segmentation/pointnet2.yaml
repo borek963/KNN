@@ -1,5 +1,39 @@
 models:
     # PointNet++: Deep Hierarchical Feature Learning on Point Sets in a Metric Space (https://arxiv.org/abs/1706.02413)
+    mypointnet2:
+        class: mypointnet2.MyPointNet2
+        conv_type: "DENSE"
+        use_category: ${data.use_category}
+        # sampling
+        down_conv:
+            module_name: PointNetMSGDown
+            # Taken from "pointnet2.yaml"
+            npoint: [ 512, 128 ]
+            radii: [ [ 0.2 ], [ 0.4 ] ]
+            nsamples: [ [ 64 ], [ 64 ] ]
+            # ??? FEAT ???
+            down_conv_nn: [ [ [ FEAT + 3, 64, 64, 128 ] ], [ [ 128+3, 128, 128, 256 ] ] ]
+        innermost:
+            # Taken from "pointnet2.yaml"
+            # From "torch_points3d/core/dense.py" module
+            module_name: GlobalDenseBaseModule
+            nn: [ 256 + 3, 256, 512, 1024 ]
+        # interpolating
+        up_conv:
+            # From "torch_points3d/core/dense.py" module
+            module_name: DenseFPModule
+            up_conv_nn:
+              [ [ 1024 + 256, 256, 256 ],
+                [ 256 + 128, 256, 128 ],
+                [ 128 + FEAT, 128, 128, 128 ] ]
+            skip: True
+        # multi-layer perceptron layers
+        mlp_cls:
+            nn: [ 128, 128 ]
+            dropout: 0.5
+
+# ---------------------------------------------------------------------------------------------------
+
     pointnet2:
         class: pointnet2.PointNet2_MP
         conv_type: "MESSAGE_PASSING"

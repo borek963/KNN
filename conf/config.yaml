@@ -1,24 +1,38 @@
 defaults: # for loading the default config
+
+    # conf/models/${task}
   - task: segmentation # Task performed (segmentation, classification etc...)
     optional: True
+
+    # conf/models/${task}/${model_type}.yaml
   - model_type: pointnet2 # Type of model to use, e.g. pointnet2, rsconv etc...
     optional: True
+
+    # conf/data/${task}/${dataset}
   - dataset: s3disfused-fixed
     optional: True
 
+    # conf/visualization/${default}
   - visualization: default
   - lr_scheduler: exponential
+
+    # conf/training/${training}
   - training: default
 
+    # conf/debugging/${debugging.yaml}
   - debugging: default.yaml
   - models: ${defaults.0.task}/${defaults.1.model_type}
   - data: ${defaults.0.task}/${defaults.2.dataset}
+
   - sota # Contains current SOTA results on different datasets (extracted from papers !).
   - hydra/job_logging: custom
   - hydra/output: custom  # add the support for user-defined experiment folder (where to save the experiment files)
 
 job_name: benchmark # prefix name for saving the experiment file.
-model_name: pointnet2_charlesssg # Name of the specific model to load
+
+#  conf/models/${task}/${model_type}.yaml/${model_name}
+model_name: mypointnet2 # Name of the specific model to load
+
 update_lr_scheduler_on: "on_epoch" # ["on_epoch", "on_num_batch", "on_num_sample"]
 selection_stage: ""
 pretty_print: False

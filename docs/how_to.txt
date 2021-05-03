@@ -1,0 +1,12 @@
+
+What to make for model to work:
+
+Files needed:
+    - config.yaml
+    - pointnet2.yaml
+    - model/mypointnet2.py
+    - module/pointnet2/dense.py
+
+Files to use:
+    - base_conv/dense.py
+    - files from "core"

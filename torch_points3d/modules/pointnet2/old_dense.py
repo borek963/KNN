@@ -18,7 +18,6 @@ class PointNetMSGDown(BaseDenseConvolutionDown):
         bn=True,
         activation=torch.nn.LeakyReLU(negative_slope=0.01),
         use_xyz=True,
-
         normalize_xyz=False,
         **kwargs
     ):

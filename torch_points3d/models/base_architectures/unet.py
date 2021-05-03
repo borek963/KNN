@@ -76,7 +76,7 @@ class UnetBasedModel(BaseModel):
         We construct the U-Net from the innermost layer to the outermost layer.
         It is a recursive process.
 
-        opt is expected to contains the following keys:
+        opt is expected to contain the following keys:
         * down_conv
         * up_conv
         * OPTIONAL: innermost
