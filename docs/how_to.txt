@@ -10,3 +10,24 @@ Files needed:
 Files to use:
     - base_conv/dense.py
     - files from "core"
+
+What does x mean?
+    - One Hot Encoding:
+        It refers to splitting the column which contains numerical categorical data
+        to many columns depending on the number of categories present in that column.
+        Each column contains “0” or “1” corresponding to which column it has been placed.
+
+        Fruit | categorical value of fruit | price
+        apple |      1                     | 5
+        mango |      2                     | 10
+        orange|      3                     | 15
+        apple |      1                     | 20
+
+        ->
+        apple | mango | orange | price
+        1     |   0   |    0   |   5
+        0     |   1   |    0   |   10
+        1     |   0   |    0   |   15
+        0     |   0   |    1   |   20
+
+    -

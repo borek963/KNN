@@ -1,6 +1,7 @@
 
 import logging
 import copy
+import DataError
 
 from torch_points3d.modules.pointnet2 import *
 from torch_points3d.models.base_architectures import UnetBasedModel
@@ -60,6 +61,14 @@ class MyPointNet2(UnetBasedModel):
         self.loss_names = ["loss_seg"]
         self.visual_names = ["data_visual"]
 
+        self.input = None
+        self.labels = None
+        self.batch_idx = None
+        self.category = None
+
+        self.loss_seg = None
+        self.data_visual = None
+
     def set_input(self, data, device):
         """Unpack input data from the dataloader and perform necessary pre-processing steps.
         Parameters:
@@ -69,20 +78,15 @@ class MyPointNet2(UnetBasedModel):
                 x -- Features [B, C, N]
                 pos -- Points [B, N, 3]
         """
-        assert len(data.pos.shape) == 3
+        if len(data.pos.shape) != 3:
+            raise ValueError(f"Position data shape should be 3, {len(data.pos.shape)} - given!")
         data = data.to(device)
-        if data.x is not None:
-            x = data.x.transpose(1, 2).contiguous()
-        else:
-            x = None
+
+        x = data.x.transpose(1, 2).contiguous() if (data.x is not None) else None
         self.input = Data(x=x, pos=data.pos)
-        if data.y is not None:
-            self.labels = torch.flatten(data.y).long()  # [B * N]
-        else:
-            self.labels = None
+        self.labels = torch.flatten(data.y).long() if (data.y is not None) else None  # [B * N]
         self.batch_idx = torch.arange(0, data.pos.shape[0]).view(-1, 1).repeat(1, data.pos.shape[1]).view(-1)
-        if self._use_category:
-            self.category = data.category
+        self.category = data.category if self._use_category else ...
 
     def forward(self, *args, **kwargs):
         r"""
@@ -93,22 +97,26 @@ class MyPointNet2(UnetBasedModel):
         """
         data = self.model(self.input)
         last_feature = data.x
+
         if self._use_category:
+            # splitting categorical data to more columns
             cat_one_hot = F.one_hot(self.category, self._num_categories).float().transpose(1, 2)
+            # concatenates given tensors (dim over which)
             last_feature = torch.cat((last_feature, cat_one_hot), dim=1)
 
         self.output = self.FC_layer(last_feature).transpose(1, 2).contiguous().view((-1, self._num_classes))
 
         if self._weight_classes is not None:
             self._weight_classes = self._weight_classes.to(self.output.device)
+
         if self.labels is not None:
             self.loss_seg = F.cross_entropy(
                 self.output, self.labels, weight=self._weight_classes, ignore_index=IGNORE_LABEL
             )
-
         self.data_visual = self.input
         self.data_visual.y = torch.reshape(self.labels, data.pos.shape[0:2])
         self.data_visual.pred = torch.max(self.output, -1)[1].reshape(data.pos.shape[0:2])
+
         return self.output
 
     def backward(self):
