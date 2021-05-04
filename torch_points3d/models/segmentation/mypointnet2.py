@@ -1,7 +1,6 @@
 
 import logging
 import copy
-import DataError
 
 from torch_points3d.modules.pointnet2 import *
 from torch_points3d.models.base_architectures import UnetBasedModel
@@ -34,6 +33,7 @@ class MyPointNet2(UnetBasedModel):
             self._num_categories = 0
             log.info(f"Category information is not going to be used")
 
+        # ---------------------------------------------------
         # Specification of last MLP based on
         # mlp_cls opt in "mypointnet2" in "pointnet2.yaml"
         last_mlp_opt = copy.deepcopy(option.mlp_cls)
@@ -56,6 +56,7 @@ class MyPointNet2(UnetBasedModel):
         # Add layers to model initialized via UnetBasedModel
         self.FC_layer.append(Conv1D(last_mlp_opt.nn[-1], self._num_classes,
                                     activation=None, bias=True, bn=False))
+        # -------------------------------------------------------------------
 
         # Name specs.
         self.loss_names = ["loss_seg"]
@@ -109,6 +110,7 @@ class MyPointNet2(UnetBasedModel):
         if self._weight_classes is not None:
             self._weight_classes = self._weight_classes.to(self.output.device)
 
+        # Compute loss Cross Entropy
         if self.labels is not None:
             self.loss_seg = F.cross_entropy(
                 self.output, self.labels, weight=self._weight_classes, ignore_index=IGNORE_LABEL

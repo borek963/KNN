@@ -1,15 +1,28 @@
 
+Where to look:
+    - https://github.com/QingyongHu/RandLA-Net/blob/master/RandLANet.py
+    - https://torch-points3d.readthedocs.io/en/latest/index.html
+    -
+
 What to make for model to work:
+    (PointNet++
+    - Files needed:
+        - config.yaml
+        - pointnet2.yaml
+        - model/mypointnet2.py
+        - module/pointnet2/dense.py
+    - Files to use:
+        - base_conv/dense.py
+        - files from "core")
 
-Files needed:
-    - config.yaml
-    - pointnet2.yaml
-    - model/mypointnet2.py
-    - module/pointnet2/dense.py
-
-Files to use:
-    - base_conv/dense.py
-    - files from "core"
+    RandLaNet
+    - Files needed:
+        - config.yaml
+        - randlanet.yaml
+        - model/randlanet.py
+        - module/ranlanet/modules.py
+    - Files to use:
+        - files from "core"
 
 What does x mean?
     - One Hot Encoding:
@@ -30,4 +43,12 @@ What does x mean?
         1     |   0   |    0   |   15
         0     |   0   |    1   |   20
 
-    -
+    - Residual block:
+        (SHORT: very deep networks are not able to learn simple functions, solution:
+            - feed output of layer to not only next layer but all of them)
+        https://towardsdatascience.com/residual-blocks-building-blocks-of-resnet-fd90ca15d6ec
+
+    - Dilated Residual Block is used in RandLaNet and it is composed of MLPs, LocSEs,
+      attentive poolings.
+
+
