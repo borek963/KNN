@@ -51,4 +51,7 @@ What does x mean?
     - Dilated Residual Block is used in RandLaNet and it is composed of MLPs, LocSEs,
       attentive poolings.
 
+    - nn.Linear can be called for 3D - linear transform is applied only on the last dimension
+        - [[10, 16, 32], [10, 32, 64]]
 
+    -

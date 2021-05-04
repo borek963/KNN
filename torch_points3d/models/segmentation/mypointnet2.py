@@ -53,7 +53,6 @@ class MyPointNet2(UnetBasedModel):
         if last_mlp_opt.dropout:
             self.FC_layer.append(torch.nn.Dropout(p=last_mlp_opt.dropout))
 
-        # Add layers to model initialized via UnetBasedModel
         self.FC_layer.append(Conv1D(last_mlp_opt.nn[-1], self._num_classes,
                                     activation=None, bias=True, bn=False))
         # -------------------------------------------------------------------

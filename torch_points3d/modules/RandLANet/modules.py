@@ -18,7 +18,7 @@ class RandlaKernel(MessagePassing):
 
         self.point_pos_nn = MLP(point_pos_nn)
         self.attention_nn = MLP(attention_nn)
-        self.global_nn = MLP(global_nn)
+        self.global_nn = MLP(global_nn)  # == down_conv_nn from .yaml file
 
     def forward(self, x, pos, edge_index):
         x = self.propagate(edge_index, x=x, pos=pos)
@@ -28,19 +28,21 @@ class RandlaKernel(MessagePassing):
         if x_j is None:
             x_j = pos_j
 
-        # This is in paper - Figure 3. part of LocSE block (Local Spatial Encoding)
+        # This is in paper - Figure 3. PART of LocSE block (Local Spatial Encoding)
         # compute relative position encoding
+        # in paper equation (1)
         vij = pos_i - pos_j
         dij = torch.norm(vij, dim=1).unsqueeze(1)
         relPointPos = torch.cat([pos_i, pos_j, vij, dij], dim=1)
-        rij = self.point_pos_nn(relPointPos)
+        rij = self.point_pos_nn(relPointPos)  # (r_i^k)
 
-        # This is in paper - Figure 3. part of LocSE block (Local Spatial Encoding)
-        # concatenate position encoding with feature vector
+        # This is in paper - Figure 3. PART of LocSE block (Local Spatial Encoding)
+        # concatenate position encoding with feature vector for feature augmentation
         fij_hat = torch.cat([x_j, rij], dim=1)
 
         # This is in paper - Figure 3. Attentive Pooling block
         # attentive pooling
+        # in paper equation (2) and (3)
         g_fij = self.attention_nn(fij_hat)
         s_ij = F.softmax(g_fij, -1)
         msg = s_ij * fij_hat
@@ -106,7 +108,7 @@ class DilatedResidualBlock(BaseResnetBlock):
         super(DilatedResidualBlock, self).__init__(indim, outdim, outdim)
         self.conv1 = RandlaConv(
             ratio1,
-            16,
+            16,  # KNN - k value
             point_pos_nn=point_pos_nn1,
             attention_nn=attention_nn1,
             down_conv_nn=global_nn1,
@@ -116,7 +118,7 @@ class DilatedResidualBlock(BaseResnetBlock):
         kwargs["nb_feature"] = None
         self.conv2 = RandlaConv(
             ratio2,
-            16,
+            16,  # KNN - k value
             point_pos_nn=point_pos_nn2,
             attention_nn=attention_nn2,
             down_conv_nn=global_nn2,
