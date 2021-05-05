@@ -20,6 +20,17 @@ class RandLANetSeg(UnetBasedModel):
         self._weight_classes = dataset.weight_classes
         self._use_category = getattr(option, "use_category", False)
 
+        # Name specs.
+        self.loss_names = ["loss_seg"]
+        self.visual_names = ["data_visual"]
+
+        self.input = None
+        self.labels = None
+        self.batch_idx = None
+        self.category = None
+        self.loss_seg = None
+        self.data_visual = None
+
         if self._use_category:
             if not dataset.class_to_segments:
                 raise ValueError("Dataset does not specify needed "
@@ -31,19 +42,10 @@ class RandLANetSeg(UnetBasedModel):
             self._num_categories = 0
             log.info(f"Category information is not going to be used")
 
-        # Name specs.
-        self.loss_names = ["loss_seg"]
-        self.visual_names = ["data_visual"]
+        # ------------------------------------------------------------------
+        self.start_FC_layer = Seq()
+        self.start_FC_layer.append(MLP([3, 8]))
 
-        self.input = None
-        self.labels = None
-        self.batch_idx = None
-        self.category = None
-
-        self.loss_seg = None
-        self.data_visual = None
-
-        # REEEEEEEEEEEEEAAAAAAAAAAAAAAALLLLLYYYYYY NOT SURE ABOUT THIS
         last_mlp_opt = copy.deepcopy(option.mlp_cls)
         self.FC_layer = Seq()
         last_mlp_opt.nn[0] += self._num_categories
@@ -60,17 +62,24 @@ class RandLANetSeg(UnetBasedModel):
     def set_input(self, data, device):
         # if len(data.pos.shape) < 3:
         #     raise ValueError(f"Position data shape should be 3, {len(data.pos.shape)} - given!")
-
         data = data.to(device)
 
-        x = data.x.transpose(1, 2).contiguous() if (data.x is not None) else None
-        self.input = Data(x=x, pos=data.pos)
+        # In this case it is: (batch_size * num_of_points (defined in S3DIS yaml config), features)
+        x = data.x.contiguous() if (data.x is not None) else None
+        print("tisk x:", data.x.size())
+
+        self.input = Data(pos=data.pos)
         self.labels = torch.flatten(data.y).long() if (data.y is not None) else None  # [B * N]
-        self.batch_idx = torch.arange(0, data.pos.shape[0]).view(-1, 1).repeat(1, data.pos.shape[1]).view(-1)
+        self.batch_idx = data.batch
         self.category = data.category if self._use_category else ...
 
     def forward(self, *args, **kwargs) -> Any:
-        data = self.model(self.input)
+
+        data = self.start_FC_layer(self.input.pos)
+        # print(data.size())
+
+        # data should be features for model, right?
+        data = self.model(Data(pos=self.input.pos, x=data, batch=self.batch_idx))
         last_feature = data.x
 
         self.output = self.FC_layer(last_feature).transpose(1, 2).contiguous().view((-1, self._num_classes))

@@ -5,62 +5,39 @@ models:
         conv_type: "MESSAGE_PASSING"
         down_conv:
             module_name: RandLANetRes
+            # How many points to preserve
             ratio: [[1, 1], [0.5, 0.5]]
-            indim: [3, 32]
+            indim: [8, 32]
             outdim: [32, 128]
+            # 1 4  == 1 dilated resiudal block
+            # X X
+            # 2 5
+            # X X
+            # 3 6
+            # X X
             point_pos_nn:
-                [[[10, 8, FEAT], [10, 16, 16]],
-                 [[10, 16, 32], [10, 32, 64]]]
+                [[[10, 24], [10, 16]],
+                 [[10, 32], [10, 64]]]
+            # Same size (y)
             attention_nn:
-                [[[2 * FEAT, 8, 2 * FEAT], [32, 64, 32]],
-                    [[64, 128, 64], [128, 256, 128]],]
+                [[[32, 32], [32, 32]],
+                 [[64, 64], [128, 128]]]
             down_conv_nn:
-                [[[2 * FEAT, 8, 16], [32, 64, 32]],
-                 [[64, 64, 64], [128, 128, 128]]]
-        innermost:
-            module_name: GlobalBaseModule
-            aggr: max
-            nn: [131, 128]
+                [[[32, 16], [32, 32]],
+                 [[64, 64], [128, 128]]]
+        #innermost:
+        #    module_name: GlobalBaseModule
+        #    aggr: max
+        #    nn: [131, 128]
 
         # Interpolating
         up_conv:
             module_name: FPModule
-            up_conv_nn: [[128 + 128, 128],
-                         [128 + 32, 64],
-                         [64 + FEAT, 64]]
+            up_conv_nn: [[64 + FEAT, 64]]
             up_k: [1, 1, 1]
             skip: True
 
         # Performs point classification - "end"
         mlp_cls:
             nn: [64, 64]
-            dropout: 0.5
-
-    Randlanet_Conv:
-        class: randlanet.RandLANetSeg
-        conv_type: "MESSAGE_PASSING"
-        down_conv:
-            module_name: RandlaConv
-            ratio: [0.25, 0.25, 0.25]
-            k: [16, 16, 16]
-            point_pos_nn: [[10, 8, FEAT], [10, 8, 16], [10, 16, 32]]
-            attention_nn: [[2 * FEAT, 8, 2 * FEAT], [32, 64, 32], [64, 128, 64]]
-            down_conv_nn: [[2 * FEAT, 8, 16], [32, 64, 32], [64, 128, 128]]
-        innermost:
-            module_name: GlobalBaseModule
-            aggr: max
-            nn: [131, 128]
-        up_conv:
-            module_name: FPModule
-            up_conv_nn:
-                [
-                    [128 + 128, 128],
-                    [128 + 32, 64],
-                    [64 + 16, 64],
-                    [64 + FEAT, 64],
-                ]
-            up_k: [1, 1, 1, 1]
-            skip: True
-        mlp_cls:
-            nn: [64, 64, 64, 64, 64]
             dropout: 0.5

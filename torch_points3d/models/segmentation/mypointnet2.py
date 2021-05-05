@@ -78,11 +78,18 @@ class MyPointNet2(UnetBasedModel):
                 x -- Features [B, C, N]
                 pos -- Points [B, N, 3]
         """
+
+        print("tisk y:", data.y)
+        print("tisk pos:", data.pos)
+
         if len(data.pos.shape) != 3:
             raise ValueError(f"Position data shape should be 3, {len(data.pos.shape)} - given!")
         data = data.to(device)
 
+        print("tisk x:", data.x.size())
+
         x = data.x.transpose(1, 2).contiguous() if (data.x is not None) else None
+
         self.input = Data(x=x, pos=data.pos)
         self.labels = torch.flatten(data.y).long() if (data.y is not None) else None  # [B * N]
         self.batch_idx = torch.arange(0, data.pos.shape[0]).view(-1, 1).repeat(1, data.pos.shape[1]).view(-1)
