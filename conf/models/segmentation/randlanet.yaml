@@ -6,7 +6,7 @@ models:
         down_conv:
             module_name: RandLANetRes
             # How many points to preserve
-            ratio: [[1, 1], [0.5, 0.5]]
+            ratio: [[1, 1], [1, 1]]
             indim: [8, 32]
             outdim: [32, 128]
             # 1 4  == 1 dilated resiudal block
@@ -25,19 +25,19 @@ models:
             down_conv_nn:
                 [[[32, 16], [32, 32]],
                  [[64, 64], [128, 128]]]
-        #innermost:
-        #    module_name: GlobalBaseModule
-        #    aggr: max
-        #    nn: [131, 128]
+        innermost:
+            module_name: GlobalBaseModule
+            aggr: max
+            nn: [131, 128]
 
         # Interpolating
         up_conv:
             module_name: FPModule
-            up_conv_nn: [[64 + FEAT, 64]]
+            up_conv_nn: [[128 + 128, 128], [128 + 32, 64], [64 + 8, 32]]
             up_k: [1, 1, 1]
             skip: True
 
         # Performs point classification - "end"
         mlp_cls:
-            nn: [64, 64]
+            nn: [32, 16]
             dropout: 0.5

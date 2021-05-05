@@ -82,7 +82,7 @@ class RandLANetSeg(UnetBasedModel):
         data = self.model(Data(pos=self.input.pos, x=data, batch=self.batch_idx))
         last_feature = data.x
 
-        self.output = self.FC_layer(last_feature).transpose(1, 2).contiguous().view((-1, self._num_classes))
+        self.output = self.FC_layer(last_feature).contiguous().view((-1, self._num_classes))
 
         if self._weight_classes is not None:
             self._weight_classes = self._weight_classes.to(self.output.device)
@@ -93,8 +93,8 @@ class RandLANetSeg(UnetBasedModel):
                 self.output, self.labels, weight=self._weight_classes, ignore_index=IGNORE_LABEL
             )
         self.data_visual = self.input
-        self.data_visual.y = torch.reshape(self.labels, data.pos.shape[0:2])
-        self.data_visual.pred = torch.max(self.output, -1)[1].reshape(data.pos.shape[0:2])
+        self.data_visual.y = self.labels
+        self.data_visual.pred = torch.max(self.output, -1)
 
         return self.output
 
