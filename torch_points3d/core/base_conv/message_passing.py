@@ -50,6 +50,9 @@ class BaseConvolutionDown(BaseConvolution):
         batch_obj.idx = idx
         batch_obj.edge_index = edge_index
 
+        # TODO
+        # print(x[idx, :])
+        # torch.index_select(input=x, dim=0, index=idx.cuda()) instead of x
         batch_obj.x = self.conv(x, (pos[idx], pos), edge_index, batch)
 
         batch_obj.pos = pos[idx]
