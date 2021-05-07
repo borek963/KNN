@@ -17,7 +17,7 @@ defaults: # for loading the default config
   - lr_scheduler: exponential
 
     # conf/training/${training}
-  - training: default
+  - training: randlanet
 
     # conf/debugging/${debugging.yaml}
   - debugging: default.yaml

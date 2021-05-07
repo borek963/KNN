@@ -65,8 +65,7 @@ class RandLANetSeg(UnetBasedModel):
         data = data.to(device)
 
         # In this case it is: (batch_size * num_of_points (defined in S3DIS yaml config), features)
-        x = data.x.contiguous() if (data.x is not None) else None
-        print("tisk x:", data.x.size())
+        data.x = data.pos if (data.x is None) else data.x
 
         self.input = Data(pos=data.pos)
         self.labels = torch.flatten(data.y).long() if (data.y is not None) else None  # [B * N]
@@ -76,7 +75,6 @@ class RandLANetSeg(UnetBasedModel):
     def forward(self, *args, **kwargs) -> Any:
 
         data = self.start_FC_layer(self.input.pos)
-        # print(data.size())
 
         # data should be features for model, right?
         data = self.model(Data(pos=self.input.pos, x=data, batch=self.batch_idx))

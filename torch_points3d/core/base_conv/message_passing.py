@@ -45,15 +45,12 @@ class BaseConvolutionDown(BaseConvolution):
         batch_obj = Batch()
         x, pos, batch = data.x, data.pos, data.batch
         idx = self.sampler(pos, batch)
-        row, col = self.neighbour_finder(pos, pos[idx], batch_x=batch, batch_y=batch[idx])
+        row, col = self.neighbour_finder(pos[idx], pos[idx], batch_x=batch[idx], batch_y=batch[idx])
         edge_index = torch.stack([col, row], dim=0)
         batch_obj.idx = idx
         batch_obj.edge_index = edge_index
 
-        # TODO
-        # print(x[idx, :])
-        # torch.index_select(input=x, dim=0, index=idx.cuda()) instead of x
-        batch_obj.x = self.conv(x, (pos[idx], pos), edge_index, batch)
+        batch_obj.x = self.conv(x[idx], (pos[idx], pos), edge_index, batch)
 
         batch_obj.pos = pos[idx]
         batch_obj.batch = batch[idx]
@@ -241,6 +238,7 @@ class BaseResnetBlock(torch.nn.Module):
         batch_obj = Batch()
         x = data.x  # (N, indim)
         shortcut = x  # (N, indim)
+
         x = self.features_downsample_nn(x)  # (N, outdim//4)
         # if this is an identity resnet block, idx will be None
         data = self.convs(data)  # (N', convdim)
@@ -249,6 +247,7 @@ class BaseResnetBlock(torch.nn.Module):
         x = self.features_upsample_nn(x)  # (N', outdim)
         if idx is not None:
             shortcut = shortcut[idx]  # (N', indim)
+            x = x[idx]
         shortcut = self.shortcut_feature_resize_nn(shortcut)  # (N', outdim)
         x = shortcut + x
         batch_obj.x = x

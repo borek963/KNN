@@ -6,7 +6,7 @@ models:
         down_conv:
             module_name: RandLANetRes
             # How many points to preserve
-            ratio: [[1, 1], [1, 1]]
+            ratio: [[1, 1], [0.5, 0.5]]
             indim: [8, 32]
             outdim: [32, 128]
             # 1 4  == 1 dilated resiudal block

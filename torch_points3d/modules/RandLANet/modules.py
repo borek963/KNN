@@ -21,6 +21,7 @@ class RandlaKernel(MessagePassing):
         self.global_nn = MLP(global_nn)  # == down_conv_nn from .yaml file
 
     def forward(self, x, pos, edge_index):
+        # print("X, pos0, pos1: ", x.size(), pos[0].size(), pos[1].size())
         x = self.propagate(edge_index, x=x, pos=pos)
         return x
 
@@ -33,25 +34,16 @@ class RandlaKernel(MessagePassing):
         # in paper equation (1)
         vij = pos_i - pos_j
 
-        # print("pos_i a pos_j:", pos_i, pos_j)
-        # print("vij:", vij)
-
-        print(f"vij: {vij}, pos_i: {pos_i}, pos_j: {pos_j}")
+        # print(f"vij: {vij}, pos_i: {pos_i}, pos_j: {pos_j}")
         dij = torch.norm(vij, dim=1).unsqueeze(1)
-        print("dij: ", dij)
+        # print("dij: ", dij)
 
         relPointPos = torch.cat([pos_i, pos_j, vij, dij], dim=1)
-        print(relPointPos.size())
-        print(relPointPos)
         rij = self.point_pos_nn(relPointPos)  # (r_i^k)
-        print("TA4")
-        print(rij)
 
         # This is in paper - Figure 3. PART of LocSE block (Local Spatial Encoding)
         # concatenate position encoding with feature vector for feature augmentation
         fij_hat = torch.cat([x_j, rij], dim=1)
-        print("TU")
-        print(fij_hat.size())
 
         # This is in paper - Figure 3. Attentive Pooling block
         # attentive pooling
@@ -148,14 +140,6 @@ class DilatedResidualBlock(BaseResnetBlock):
 class RandLANetRes(torch.nn.Module):
     def __init__(self, indim, outdim, ratio, point_pos_nn, attention_nn, down_conv_nn, *args, **kwargs):
         super(RandLANetRes, self).__init__()
-
-        print(
-            indim,
-            outdim,
-            ratio,
-            point_pos_nn,
-            attention_nn
-        )
         self._conv = DilatedResidualBlock(
             indim,
             outdim,
