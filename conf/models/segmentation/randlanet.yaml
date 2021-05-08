@@ -6,9 +6,9 @@ models:
         down_conv:
             module_name: RandLANetRes
             # How many points to preserve
-            ratio: [[1, 1], [0.5, 0.5]]
-            indim: [8, 32]
-            outdim: [32, 128]
+            ratio: [[1, 1], [0.5, 0.5], [0.25, 0.25], [0.125, 0.125]]
+            indim: [8, 32, 128, 256]
+            outdim: [32, 128, 256, 512]
             # 1 4  == 1 dilated resiudal block
             # X X
             # 2 5
@@ -17,24 +17,30 @@ models:
             # X X
             point_pos_nn:
                 [[[10, 24], [10, 16]],
-                 [[10, 32], [10, 64]]]
+                 [[10, 32], [10, 64]],
+                 [[10, 128], [10, 128]],
+                 [[10, 256], [10, 256]]]
             # Same size (y)
             attention_nn:
                 [[[32, 32], [32, 32]],
-                 [[64, 64], [128, 128]]]
+                 [[64, 64], [128, 128]],
+                 [[256, 256], [256, 256]],
+                 [[512, 512], [512, 512]]]
             down_conv_nn:
                 [[[32, 16], [32, 32]],
-                 [[64, 64], [128, 128]]]
+                 [[64, 64], [128, 128]],
+                 [[256, 128], [256, 256]],
+                 [[512, 256], [512, 512]]]
         innermost:
             module_name: GlobalBaseModule
             aggr: max
-            nn: [131, 128]
+            nn: [512 + 3, 512]
 
         # Interpolating
         up_conv:
             module_name: FPModule
-            up_conv_nn: [[128 + 128, 128], [128 + 32, 64], [64 + 8, 32]]
-            up_k: [1, 1, 1]
+            up_conv_nn: [[512 + 512, 512], [512 + 256, 256], [256 + 128, 128], [128 + 32, 64], [64 + 8, 32]]
+            up_k: [1, 1, 1, 1, 1]
             skip: True
 
         # Performs point classification - "end"

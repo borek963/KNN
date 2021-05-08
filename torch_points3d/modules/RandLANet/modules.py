@@ -21,7 +21,7 @@ class RandlaKernel(MessagePassing):
         self.global_nn = MLP(global_nn)  # == down_conv_nn from .yaml file
 
     def forward(self, x, pos, edge_index):
-        # print("X, pos0, pos1: ", x.size(), pos[0].size(), pos[1].size())
+        print("X, pos0, pos1: ", x.size(), pos[0].size(), pos[1].size())
         x = self.propagate(edge_index, x=x, pos=pos)
         return x
 
