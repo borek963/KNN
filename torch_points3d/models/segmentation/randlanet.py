@@ -33,7 +33,7 @@ class RandLANetSeg(UnetBasedModel):
 
         if self._use_category:
             if not dataset.class_to_segments:
-                raise ValueError("Dataset does not specify needed "
+                raise ValueError("Dataset does not specify, needed "
                                  "class_to_segments property")
             self._num_categories = len(dataset.class_to_segments.keys())
             log.info(f"Using category information for "
@@ -95,7 +95,6 @@ class RandLANetSeg(UnetBasedModel):
         self.data_visual.pred = torch.max(self.output, -1)
 
         return self.output
-
 
     def backward(self) -> Any:
         self.loss_seg.backward()

@@ -50,7 +50,13 @@ class BaseConvolutionDown(BaseConvolution):
         batch_obj.idx = idx
         batch_obj.edge_index = edge_index
 
-        batch_obj.x = self.conv(x[idx], (pos[idx], pos), edge_index, batch)
+        print(x[idx])
+        print((pos[idx], pos))
+        print(edge_index)
+        print(batch)
+        # TODO batch missing
+        # self.conv(x=x[idx], pos=(pos[idx], pos), edge_index=edge_index, batch=batch)
+        batch_obj.x = self.conv(x=x[idx], pos=(pos[idx], pos[idx]), edge_index=edge_index)
 
         batch_obj.pos = pos[idx]
         batch_obj.batch = batch[idx]
@@ -180,18 +186,18 @@ class FPModule(BaseConvolutionUp):
 
 
 class BaseResnetBlockDown(BaseConvolutionDown):
-    def __init__(self, sampler, neighbour_finder, *args, **kwargs):
+    def __init__(self, sampler, neighbour_finder, indim, convdim, outdim, *args, **kwargs):
         super(BaseResnetBlockDown, self).__init__(sampler, neighbour_finder, *args, **kwargs)
 
-        in_features, out_features, conv_features = kwargs.get("down_conv_nn", None)
-
-        self.in_features = in_features
-        self.out_features = out_features
-        self.conv_features = conv_features
+        self.in_features = indim
+        self.out_features = outdim
+        self.conv_features = convdim
 
         self.features_downsample_nn = MLP([self.in_features, self.conv_features])
 
-        self.features_upsample_nn = MLP([self.conv_features, self.out_features])
+        # TODO changed
+        # self.features_upsample_nn = MLP([self.conv_features, self.out_features])
+        self.features_upsample_nn = MLP([self.out_features, self.out_features])
         self.shortcut_feature_resize_nn = MLP([self.in_features, self.out_features])
 
     def convs(self, x, pos, edge_index):

@@ -28,6 +28,7 @@ class RandlaKernel(MessagePassing):
     def message(self, x_j, pos_i, pos_j):
         if x_j is None:
             x_j = pos_j
+        print(len(x_j), len(pos_i), len(pos_j))
 
         # This is in paper - Figure 3. PART of LocSE block (Local Spatial Encoding)
         # compute relative position encoding
@@ -58,6 +59,49 @@ class RandlaKernel(MessagePassing):
         return self.global_nn(aggr_out)
 
 
+class RandLANetRes(BaseResnetBlockDown):
+    def __init__(self,
+                 indim, convdim, outdim,
+                 ratio,
+                 point_pos_nn,
+                 attention_nn,
+                 down_conv_nn,
+                 *args, **kwargs):
+        super(RandLANetRes, self).__init__(
+            sampler=FPSSampler(ratio),
+            neighbour_finder=KNNNeighbourFinder(16),
+            indim=indim, convdim=convdim, outdim=outdim,
+            *args
+        )
+        self.point_pos_nn = point_pos_nn
+        self.attention_nn = attention_nn
+        self.down_conv_nn = down_conv_nn
+        self.indim = indim
+        self.convdim = convdim
+        self.outdim = outdim
+        kwargs["nb_feature"] = None
+
+        self.conv1 = RandlaKernel(
+            point_pos_nn=point_pos_nn[0],
+            attention_nn=attention_nn[0],
+            global_nn=down_conv_nn[0],
+            *args,
+            **kwargs
+        )
+        self.conv2 = RandlaKernel(
+            point_pos_nn=point_pos_nn[1],
+            attention_nn=attention_nn[1],
+            global_nn=down_conv_nn[1],
+            *args,
+            **kwargs
+        )
+
+    def convs(self, x, pos, edge_index):
+        data = self.conv1(x, pos, edge_index)
+        data = self.conv2(data, pos, edge_index)
+        return data, pos, edge_index, None
+
+
 class RandlaConv(BaseConvolutionDown):
     # In pointnet++ - this is defined in "message_passing.py"
     # (PointNet++ uses Multiscale version of base class)
@@ -66,7 +110,38 @@ class RandlaConv(BaseConvolutionDown):
         # Random sampling implementation and find K nearest neighbors
         # In PointNet++ FPSSampler and MultiscaleRadiusNeighbourFinder are used.
         super(RandlaConv, self).__init__(
-            RandomSampler(ratio),
+            FPSSampler(ratio),
+            KNNNeighbourFinder(k),
+            *args,
+            **kwargs
+        )
+
+        # kwargs = key-worded list of args, never used them before, definitely WILL
+        if kwargs.get("index") == 0 and kwargs.get("nb_feature") is not None:
+            kwargs["point_pos_nn"][-1] = kwargs.get("nb_feature")
+            kwargs["attention_nn"][0] = kwargs["attention_nn"][-1] = kwargs.get("nb_feature") * 2
+            kwargs["down_conv_nn"][0] = kwargs.get("nb_feature") * 2
+
+        # PointNet++ uses PointConv from: "/torch_geometric/nn/conv/point_conv.py"
+        self._conv = RandlaKernel(*args, global_nn=kwargs["down_conv_nn"], **kwargs)
+        # Probably not needed TODO
+        self._ratio = ratio
+        self._k = k
+
+    # Return instance of conv layer defined in __init__
+    def conv(self, x, pos, edge_index, batch):
+        return self._conv(x, pos, edge_index)
+
+
+class OLDRandlaConv(BaseConvolutionDown):
+    # In pointnet++ - this is defined in "message_passing.py"
+    # (PointNet++ uses Multiscale version of base class)
+    # -------------------------------------------------------
+    def __init__(self, ratio=None, k=None, *args, **kwargs):
+        # Random sampling implementation and find K nearest neighbors
+        # In PointNet++ FPSSampler and MultiscaleRadiusNeighbourFinder are used.
+        super(RandlaConv, self).__init__(
+            FPSSampler(ratio),
             KNNNeighbourFinder(k),
             *args,
             **kwargs
@@ -137,7 +212,8 @@ class DilatedResidualBlock(BaseResnetBlock):
         return data
 
 
-class RandLANetRes(torch.nn.Module):
+# Message passing variant
+class RandLANetResMP(torch.nn.Module):
     def __init__(self, indim, outdim, ratio, point_pos_nn, attention_nn, down_conv_nn, *args, **kwargs):
         super(RandLANetRes, self).__init__()
         self._conv = DilatedResidualBlock(

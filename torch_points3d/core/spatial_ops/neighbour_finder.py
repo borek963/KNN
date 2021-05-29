@@ -44,7 +44,17 @@ class KNNNeighbourFinder(BaseNeighbourFinder):
         self.k = k
 
     def find_neighbours(self, x, y, batch_x, batch_y):
-        return knn(x, y, self.k, batch_x, batch_y)
+        print("Začátek...")
+        # print(f"x: {x.size()}, y: {y.size()}")
+        # print(self.k)
+        # print(batch_x, batch_y, batch_x.size(), batch_y.size())
+        tmp = knn(x, y, self.k, batch_x, batch_y)
+        # CHANGE!
+        # cuda = torch.device("cuda")
+        # tmp = torch.ones(2, self.k * len(x), dtype=torch.long, device=cuda)
+        print("Konec...")
+        # print(tmp)
+        return tmp
 
 
 class DilatedKNNNeighbourFinder(BaseNeighbourFinder):
