@@ -1,3 +1,15 @@
+# --------------------------------------------------------- #
+#                                                           #
+#   Project: 3D Point Cloud Semantic Segmentation           #
+#   University: Brno University of Technology               #
+#   Year: 2021                                              #
+#                                                           #
+#   Authors:                                                #
+#       Bořek Reich    <xreich06@stud.fit.vutbr.cz>         #
+#       Martin Chládek <xchlad16@stud.fit.vutbr.cz>         #
+#                                                           #
+# --------------------------------------------------------- #
+
 data:
   task: segmentation
   class: s3dis.S3DISFusedDataset
@@ -7,13 +19,13 @@ data:
   use_category: False
   pre_collate_transform:
     - transform: PointCloudFusion   # One point cloud per area
-    - transform: SaveOriginalPosId    # Required so that one can recover the original point in the fused point cloud
-    - transform: GridSampling3D       # Samples on a grid
+    - transform: SaveOriginalPosId  # Required
+    - transform: GridSampling3D     # Samples on a grid
       params:
         size: ${data.first_subsampling}
   train_transforms:
-    - transform: FixedPoints
-      lparams: [ 4096 ] # 2^17
+    - transform: FixedPoints  # Fixed for training
+      lparams: [ 131072 ]
     - transform: RandomNoise
       params:
         sigma: 0.001
@@ -21,43 +33,23 @@ data:
       params:
         degrees: 180
         axis: 2
-    - transform: RandomScaleAnisotropic
-      params:
-        scales: [ 0.8, 1.2 ]
-    - transform: RandomSymmetry
-      params:
-        axis: [ True, False, False ]
-    - transform: DropFeature
-      params:
-        drop_proba: 0.2
-        feature_name: rgb
     - transform: XYZFeature
       params:
         add_x: False
         add_y: False
         add_z: True
-    - transform: AddFeatsByKeys
-      params:
-        list_add_to_x: [ True, True ]
-        feat_names: [ rgb, pos_z ]
-        delete_feats: [ True, True ]
     - transform: Center
     - transform: ScalePos
       params:
         scale: 0.5
   test_transform:
     - transform: FixedPoints
-      lparams: [ 4096 ]
+      lparams: [ 131072 ]
     - transform: XYZFeature
       params:
         add_x: False
         add_y: False
         add_z: True
-    - transform: AddFeatsByKeys
-      params:
-        list_add_to_x: [ True, True ]
-        feat_names: [ rgb, pos_z ]
-        delete_feats: [ True, True ]
     - transform: Center
     - transform: ScalePos
       params:

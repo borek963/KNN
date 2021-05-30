@@ -1,18 +1,21 @@
-import torch
+# --------------------------------------------------------- #
+#                                                           #
+#   Project: 3D Point Cloud Semantic Segmentation           #
+#   University: Brno University of Technology               #
+#   Year: 2021                                              #
+#                                                           #
+#   Authors:                                                #
+#       Bořek Reich    <xreich06@stud.fit.vutbr.cz>         #
+#       Martin Chládek <xchlad16@stud.fit.vutbr.cz>         #
+#                                                           #
+# --------------------------------------------------------- #
+
 import torch.nn.functional as F
 from torch_geometric.nn import MessagePassing
-
-from torch_points3d.core.spatial_ops import *
 from torch_points3d.core.base_conv.message_passing import *
 
 
-class RandlaKernel(MessagePassing):
-    # Initialized by RandLaConv
-    """
-        Implements both the Local Spatial Encoding and Attentive Pooling blocks from
-        RandLA-Net: Efficient Semantic Segmentation of Large-Scale Point Clouds
-        https://arxiv.org/pdf/1911.11236
-    """
+class RandlaAgrKernel(MessagePassing):
     def __init__(self, point_pos_nn=None, attention_nn=None, global_nn=None, *args, **kwargs):
         MessagePassing.__init__(self, aggr="add")
 
@@ -21,41 +24,39 @@ class RandlaKernel(MessagePassing):
         self.global_nn = MLP(global_nn)  # == down_conv_nn from .yaml file
 
     def forward(self, x, pos, edge_index):
-        print("X, pos0, pos1: ", x.size(), pos[0].size(), pos[1].size())
+        # print(f"x.size(): {x.size()}, \n"
+        #       f"pos0.size(): {pos[0].size()}, \n"
+        #       f"pos1.size(): {pos[1].size()}")
         x = self.propagate(edge_index, x=x, pos=pos)
         return x
 
-    def message(self, x_j, pos_i, pos_j):
-        if x_j is None:
-            x_j = pos_j
-        print(len(x_j), len(pos_i), len(pos_j))
+    def message(self, x_k, pos_i, pos_k):
+        if x_k is None:
+            x_k = pos_k
 
         # This is in paper - Figure 3. PART of LocSE block (Local Spatial Encoding)
         # compute relative position encoding
         # in paper equation (1)
-        vij = pos_i - pos_j
+        v_ik = pos_i - pos_k
 
         # print(f"vij: {vij}, pos_i: {pos_i}, pos_j: {pos_j}")
-        dij = torch.norm(vij, dim=1).unsqueeze(1)
-        # print("dij: ", dij)
-
-        relPointPos = torch.cat([pos_i, pos_j, vij, dij], dim=1)
-        rij = self.point_pos_nn(relPointPos)  # (r_i^k)
+        relPointPos = torch.cat([pos_i, pos_k, v_ik, torch.norm(v_ik, dim=1).unsqueeze(1)], dim=1)
+        r_ik = self.point_pos_nn(relPointPos)  # (r_i^k)
 
         # This is in paper - Figure 3. PART of LocSE block (Local Spatial Encoding)
         # concatenate position encoding with feature vector for feature augmentation
-        fij_hat = torch.cat([x_j, rij], dim=1)
+        f_ik_hat = torch.cat([x_k, r_ik], dim=1)
 
         # This is in paper - Figure 3. Attentive Pooling block
         # attentive pooling
         # in paper equation (2) and (3)
-        g_fij = self.attention_nn(fij_hat)
-        s_ij = F.softmax(g_fij, -1)
-        msg = s_ij * fij_hat
+        g_f_ik = self.attention_nn(f_ik_hat)
+        s_ik = F.softmax(g_f_ik, -1)
 
-        return msg
+        return s_ik * f_ik_hat
 
     def update(self, aggr_out):
+        # Shared MLP
         return self.global_nn(aggr_out)
 
 
@@ -68,7 +69,7 @@ class RandLANetRes(BaseResnetBlockDown):
                  down_conv_nn,
                  *args, **kwargs):
         super(RandLANetRes, self).__init__(
-            sampler=FPSSampler(ratio),
+            sampler=RandomSampler(ratio),
             neighbour_finder=KNNNeighbourFinder(16),
             indim=indim, convdim=convdim, outdim=outdim,
             *args
@@ -81,14 +82,16 @@ class RandLANetRes(BaseResnetBlockDown):
         self.outdim = outdim
         kwargs["nb_feature"] = None
 
-        self.conv1 = RandlaKernel(
+        # First agr block = LocSE + Pooling
+        self.conv1 = RandlaAgrKernel(
             point_pos_nn=point_pos_nn[0],
             attention_nn=attention_nn[0],
             global_nn=down_conv_nn[0],
             *args,
             **kwargs
         )
-        self.conv2 = RandlaKernel(
+        # Second agr block = LocSE + Pooling
+        self.conv2 = RandlaAgrKernel(
             point_pos_nn=point_pos_nn[1],
             attention_nn=attention_nn[1],
             global_nn=down_conv_nn[1],
@@ -96,140 +99,8 @@ class RandLANetRes(BaseResnetBlockDown):
             **kwargs
         )
 
+    # Called by conv method of BaseResNet
     def convs(self, x, pos, edge_index):
         data = self.conv1(x, pos, edge_index)
         data = self.conv2(data, pos, edge_index)
         return data, pos, edge_index, None
-
-
-class RandlaConv(BaseConvolutionDown):
-    # In pointnet++ - this is defined in "message_passing.py"
-    # (PointNet++ uses Multiscale version of base class)
-    # -------------------------------------------------------
-    def __init__(self, ratio=None, k=None, *args, **kwargs):
-        # Random sampling implementation and find K nearest neighbors
-        # In PointNet++ FPSSampler and MultiscaleRadiusNeighbourFinder are used.
-        super(RandlaConv, self).__init__(
-            FPSSampler(ratio),
-            KNNNeighbourFinder(k),
-            *args,
-            **kwargs
-        )
-
-        # kwargs = key-worded list of args, never used them before, definitely WILL
-        if kwargs.get("index") == 0 and kwargs.get("nb_feature") is not None:
-            kwargs["point_pos_nn"][-1] = kwargs.get("nb_feature")
-            kwargs["attention_nn"][0] = kwargs["attention_nn"][-1] = kwargs.get("nb_feature") * 2
-            kwargs["down_conv_nn"][0] = kwargs.get("nb_feature") * 2
-
-        # PointNet++ uses PointConv from: "/torch_geometric/nn/conv/point_conv.py"
-        self._conv = RandlaKernel(*args, global_nn=kwargs["down_conv_nn"], **kwargs)
-        # Probably not needed TODO
-        self._ratio = ratio
-        self._k = k
-
-    # Return instance of conv layer defined in __init__
-    def conv(self, x, pos, edge_index, batch):
-        return self._conv(x, pos, edge_index)
-
-
-class OLDRandlaConv(BaseConvolutionDown):
-    # In pointnet++ - this is defined in "message_passing.py"
-    # (PointNet++ uses Multiscale version of base class)
-    # -------------------------------------------------------
-    def __init__(self, ratio=None, k=None, *args, **kwargs):
-        # Random sampling implementation and find K nearest neighbors
-        # In PointNet++ FPSSampler and MultiscaleRadiusNeighbourFinder are used.
-        super(RandlaConv, self).__init__(
-            FPSSampler(ratio),
-            KNNNeighbourFinder(k),
-            *args,
-            **kwargs
-        )
-
-        # kwargs = key-worded list of args, never used them before, definitely WILL
-        if kwargs.get("index") == 0 and kwargs.get("nb_feature") is not None:
-            kwargs["point_pos_nn"][-1] = kwargs.get("nb_feature")
-            kwargs["attention_nn"][0] = kwargs["attention_nn"][-1] = kwargs.get("nb_feature") * 2
-            kwargs["down_conv_nn"][0] = kwargs.get("nb_feature") * 2
-
-        # PointNet++ uses PointConv from: "/torch_geometric/nn/conv/point_conv.py"
-        self._conv = RandlaKernel(*args, global_nn=kwargs["down_conv_nn"], **kwargs)
-        # Probably not needed TODO
-        self._ratio = ratio
-        self._k = k
-
-    # Return instance of conv layer defined in __init__
-    def conv(self, x, pos, edge_index, batch):
-        return self._conv(x, pos, edge_index)
-
-
-class DilatedResidualBlock(BaseResnetBlock):
-    # This is defined for PointNet++ in dense.py
-    # (in GitHub implementation of RandLaNet: "dilated_res_block")
-    # ------------------------------------------
-    def __init__(
-        self,
-        indim,
-        outdim,
-        ratio1,
-        ratio2,
-        point_pos_nn1,
-        point_pos_nn2,
-        attention_nn1,
-        attention_nn2,
-        global_nn1,
-        global_nn2,
-        *args,
-        **kwargs
-    ):
-        if kwargs.get("index") == 0 and kwargs.get("nb_feature") is not None:
-            indim = kwargs.get("nb_feature")
-        super(DilatedResidualBlock, self).__init__(indim, outdim, outdim)
-        self.conv1 = RandlaConv(
-            ratio1,
-            16,  # KNN - k value
-            point_pos_nn=point_pos_nn1,
-            attention_nn=attention_nn1,
-            down_conv_nn=global_nn1,
-            *args,
-            **kwargs
-        )
-        kwargs["nb_feature"] = None
-        self.conv2 = RandlaConv(
-            ratio2,
-            16,  # KNN - k value
-            point_pos_nn=point_pos_nn2,
-            attention_nn=attention_nn2,
-            down_conv_nn=global_nn2,
-            *args,
-            **kwargs
-        )
-
-    def convs(self, data):
-        data = self.conv1(data)
-        data = self.conv2(data)
-        return data
-
-
-# Message passing variant
-class RandLANetResMP(torch.nn.Module):
-    def __init__(self, indim, outdim, ratio, point_pos_nn, attention_nn, down_conv_nn, *args, **kwargs):
-        super(RandLANetRes, self).__init__()
-        self._conv = DilatedResidualBlock(
-            indim,
-            outdim,
-            ratio[0],
-            ratio[1],
-            point_pos_nn[0],
-            point_pos_nn[1],
-            attention_nn[0],
-            attention_nn[1],
-            down_conv_nn[0],
-            down_conv_nn[1],
-            *args,
-            **kwargs
-        )
-
-    def forward(self, data):
-        return self._conv.forward(data)

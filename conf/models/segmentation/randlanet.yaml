@@ -1,10 +1,21 @@
+# --------------------------------------------------------- #
+#                                                           #
+#   Project: 3D Point Cloud Semantic Segmentation           #
+#   University: Brno University of Technology               #
+#   Year: 2021                                              #
+#                                                           #
+#   Authors:                                                #
+#       Bořek Reich    <xreich06@stud.fit.vutbr.cz>         #
+#       Martin Chládek <xchlad16@stud.fit.vutbr.cz>         #
+#                                                           #
+# --------------------------------------------------------- #
+
 models:
-    # RandLA-Net: Efficient Semantic Segmentation of Large-Scale Point Clouds (https://arxiv.org/pdf/1911.11236.pdf)
     randlanetseg:
-        class: randlanet.RandLANetSeg
+        class: randlanet.RandLANet
         conv_type: "MESSAGE_PASSING"
         down_conv:
-            module_name: RandLANetRes
+            module_name: RandLANet
             # How many points to preserve
             ratio: [0.25, 0.25, 0.25, 0.25]
             indim: [8, 32, 128, 256]
@@ -21,7 +32,6 @@ models:
                  [[10, 32], [10, 64]],
                  [[10, 128], [10, 128]],
                  [[10, 256], [10, 256]]]
-            # Same size (y)
             attention_nn:
                 [[[32, 32], [32, 32]],
                  [[64, 64], [128, 128]],
@@ -49,6 +59,7 @@ models:
             skip: True
 
         # Performs point classification - "end"
+        # - added in model
         mlp_cls:
             nn: [64, 64, 32]
             dropout: 0.5
