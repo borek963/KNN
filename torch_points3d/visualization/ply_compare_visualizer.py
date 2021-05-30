@@ -96,18 +96,6 @@ def plot_output(data_path):
     o3d.visualization.draw_geometries(plot_pcd(labels, xyz))
 
 
-"""
-------------------------------
-| FOR two pcd in one figure? |
-------------------------------
-vis.add_geometry(src_pcd)
-while True:
-    vis.update_geometry(src_pcd)
-    if not vis.poll_events():
-        break
-    vis.update_renderer()
-"""
-
 def main():
     DIR = os.path.dirname(os.getcwd())
     ROOT = os.path.join(DIR, "..")
@@ -120,7 +108,6 @@ def main():
     dataset_options = OmegaConf.load(os.path.join(DIR, 'conf/data/segmentation/s3disfused.yaml'))
     dataset_options.data.dataroot = os.path.join(DIR, "data")
     dataset = S3DISFusedDataset(dataset_options.data)
-    print(dataset)
 
     plot_ground_truth(dataset, data_path)
     plot_output(data_path)

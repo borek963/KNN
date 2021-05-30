@@ -11,7 +11,7 @@
 # --------------------------------------------------------- #
 
 models:
-    randlanetseg:
+    randlanet:
         class: randlanet.RandLANet
         conv_type: "MESSAGE_PASSING"
         down_conv:
