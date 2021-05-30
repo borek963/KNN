@@ -54,7 +54,6 @@ class BaseConvolutionDown(BaseConvolution):
         print((pos[idx], pos))
         print(edge_index)
         print(batch)
-        # TODO batch missing
         # self.conv(x=x[idx], pos=(pos[idx], pos), edge_index=edge_index, batch=batch)
         batch_obj.x = self.conv(x=x[idx], pos=(pos[idx], pos[idx]), edge_index=edge_index)
 
@@ -195,7 +194,6 @@ class BaseResnetBlockDown(BaseConvolutionDown):
 
         self.features_downsample_nn = MLP([self.in_features, self.conv_features])
 
-        # TODO changed
         # self.features_upsample_nn = MLP([self.conv_features, self.out_features])
         self.features_upsample_nn = MLP([self.out_features, self.out_features])
         self.shortcut_feature_resize_nn = MLP([self.in_features, self.out_features])

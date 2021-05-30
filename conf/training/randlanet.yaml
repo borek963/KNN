@@ -14,7 +14,7 @@ training:
             class: Adam  # according to paper
             params:
                 lr: ${training.optim.base_lr} # The path is cut from training
-        lr_scheduler: ${lr_scheduler}  # TODO how exactly this scheduler works - !!! should be 5 % per epoch !!!
+        lr_scheduler: ${lr_scheduler}
         bn_scheduler:
             bn_policy: "step_decay"
             params:
